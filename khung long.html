@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đánh Giá Chỉ Số Tập Trung & Ghi Nhớ</title>
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #4A90E2;
+            --secondary: #67C23A;
+            --danger: #FF4D4F;
+            --warning: #FAAD14;
+            --text: #333;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body {
+            font-family: 'Lexend', sans-serif;
+            background-color: #1a1a1a;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        #app-wrapper {
+            background-color: white;
+            width: 100%;
+            max-width: 414px;
+            height: 100vh;
+            max-height: 850px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            overflow: hidden;
+            border-radius: 20px;
+        }
+
+        @media (max-width: 500px) {
+            #app-wrapper { max-height: 100vh; border-radius: 0; }
+        }
+
+        /* Vòng tròn tiến trình & Bộ não ở trang bắt đầu */
+        .loader-container {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .brain-img {
+            font-size: 60px;
+            z-index: 2;
+        }
+        .circle-loader {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border: 4px solid #f0f0f0;
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 2s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .header { padding: 20px 20px 10px; }
+        .progress-container {
+            width: 100%;
+            height: 6px;
+            background: #eee;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        #progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            width: 0%;
+            transition: 0.4s ease;
+        }
+
+        .content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .screen { display: none; height: 100%; flex-direction: column; }
+        .active { display: flex; animation: slideIn 0.3s ease-out; }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .score-scale {
+            display: flex;
+            justify-content: space-between;
+            margin: 15px 0 5px;
+            font-size: 10px;
+            font-weight: 600;
+            color: #888;
+        }
+        .scale-bar {
+            height: 10px;
+            width: 100%;
+            background: linear-gradient(90deg, var(--danger) 0%, var(--warning) 50%, var(--secondary) 100%);
+            border-radius: 10px;
+            position: relative;
+            margin-bottom: 25px;
+        }
+        .score-marker {
+            position: absolute;
+            top: -8px;
+            width: 4px;
+            height: 26px;
+            background: #333;
+            border-radius: 2px;
+            transition: 1.5s cubic-bezier(0.17, 0.67, 0.83, 0.67);
+            left: 0%;
+            z-index: 2;
+        }
+
+        h1 { font-size: 22px; color: var(--primary); text-align: center; margin-top: 10px; }
+        .question-text { font-size: 18px; font-weight: 600; color: var(--text); margin-bottom: 25px; line-height: 1.4; }
+
+        .btn-main {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 15px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(74, 144, 226, 0.3);
+        }
+
+        .option-card {
+            background: #fff;
+            border: 2px solid #f0f0f0;
+            padding: 15px;
+            margin-bottom: 12px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-size: 15px;
+        }
+        .option-card:active { transform: scale(0.97); background: #f9f9f9; border-color: var(--primary); }
+
+        .result-card { text-align: left; padding: 20px; border-radius: 15px; background: #f9f9f9; border: 1px solid #eee; }
+        .score-big { font-size: 48px; font-weight: 800; margin: 0; color: var(--primary); text-align: center; }
+        .badge { display: block; text-align: center; padding: 6px; border-radius: 8px; font-weight: 700; font-size: 14px; margin-bottom: 15px; }
+
+        .urgent-bg { background: var(--danger); color: white; }
+        .warning-bg { background: var(--warning); color: white; }
+        .good-bg { background: var(--secondary); color: white; }
+
+        .email-note { font-size: 13px; color: #666; text-align: center; margin-bottom: 8px; font-style: italic; }
+    </style>
+</head>
+<body>
+
+<audio id="page-flip-sound" preload="auto">
+    <source src="https://www.soundjay.com/misc/sounds/page-flip-01a.mp3" type="audio/mpeg">
+</audio>
+
+<div id="app-wrapper">
+    <div class="header">
+        <div class="progress-container" id="p-bar" style="display:none;">
+            <div id="progress-fill"></div>
+        </div>
+    </div>
+
+    <div class="content">
+        <!-- START SCREEN -->
+        <div id="start-screen" class="screen active" style="justify-content: center;">
+            <div style="text-align:center">
+                <div class="loader-container">
+                    <div class="circle-loader"></div>
+                    <div class="brain-img">🧠</div>
+                </div>
+                <h1>KIỂM TRA HIỆU SUẤT NÃO BỘ</h1>
+                <p style="color: #666; margin-bottom: 30px; font-size: 15px;">Dành 3 phút đánh giá chỉ số Tập trung & Ghi nhớ của con.</p>
+                <button class="btn-main" style="width: 100%;" onclick="startQuiz()">BẮT ĐẦU ĐÁNH GIÁ</button>
+            </div>
+        </div>
+
+        <!-- QUIZ SCREEN -->
+        <div id="quiz-screen" class="screen">
+            <div id="step-info" style="font-size: 11px; color: #999; margin-bottom: 8px; font-weight: bold;">PHÂN TÍCH...</div>
+            <div id="question-text" class="question-text">...</div>
+            <div id="options-list"></div>
+        </div>
+
+        <!-- RESULT SCREEN -->
+        <div id="result-screen" class="screen">
+            <h2 style="text-align: center; margin-bottom: 10px; font-size: 18px;">KẾT QUẢ PHÂN TÍCH</h2>
+            
+            <div class="score-scale">
+                <span>0 (Yếu)</span>
+                <span>60 (Cảnh báo)</span>
+                <span>110 (Tốt)</span>
+            </div>
+            <div class="scale-bar">
+                <div id="score-marker" class="score-marker"></div>
+            </div>
+
+            <div class="result-card">
+                <div class="score-big" id="res-score">0</div>
+                <span id="res-badge" class="badge">TRẠNG THÁI</span>
+                <p id="res-desc" style="font-size: 14px; line-height: 1.6; color: #333; white-space: pre-line;"></p>
+            </div>
+            
+            <div style="margin-top: 25px;">
+                <p class="email-note">Nhận bảng phân tích chi tiết qua Email</p>
+                <button class="btn-main" style="width: 100%; background: var(--secondary); box-shadow: 0 4px 15px rgba(103, 194, 58, 0.3);" onclick="ctaAction()">
+                    NHẬN BẢN PHÂN TÍCH CHI TIẾT
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const quizData = [
+        { q: "Khi học bài, con thường:", a: "Ngồi vào học là học ngay", b: "Học một lúc rồi xao nhãng", c: "Rất khó ngồi yên, dễ phân tâm" },
+        { q: "Sau khi học xong một bài, con:", a: "Nhớ được phần lớn nội dung", b: "Phải nhắc lại mới nhớ", c: "Quên nhanh, học lại từ đầu" },
+        { q: "Khi làm bài tập, con:", a: "Chủ động, ít cần nhắc", b: "Thỉnh thoảng cần nhắc", c: "Trì hoãn, phải nhắc nhiều lần" },
+        { q: "Tình trạng quên bài của con:", a: "Ít khi quên", b: "Thỉnh thoảng quên", c: "Học trước quên sau thường xuyên" },
+        { q: "Học các môn cần ghi nhớ (từ vựng...):", a: "Nhớ khá nhanh", b: "Mất nhiều thời gian mới thuộc", c: "Học vất vả, dễ nản" },
+        { q: "Thái độ của con với việc học:", a: "Khá chủ động", b: "Cần bố mẹ động viên", c: "Dễ chán, hay né tránh" },
+        { q: "Khi không có bố mẹ bên cạnh:", a: "Vẫn tự giác học", b: "Học một lúc rồi bỏ", c: "Gần như không học" },
+        { q: "Phản ánh từ giáo viên trên lớp:", a: "Con học ổn, tập trung", b: "Thỉnh thoảng mất tập trung", c: "Hay mất tập trung, không kịp bài" },
+        { q: "Khả năng hiểu bài giảng của con:", a: "Theo kịp bài tốt", b: "Có lúc hiểu lúc không", c: "Thường xuyên không hiểu bài" },
+        { q: "Con có hay bị nhắc nhở/phàn nàn không?", a: "Chưa từng", b: "Thỉnh thoảng", c: "Thường xuyên" },
+        { q: "Về việc học thêm của con hiện tại:", a: "Con hiểu bài và tự tin hơn", b: "Học nhiều nhưng chưa cải thiện", c: "Con mệt mỏi, đi học như điểm danh" }
+    ];
+
+    let currentIdx = 0;
+    let score = 0;
+    const audio = document.getElementById('page-flip-sound');
+
+    function playSound() {
+        audio.currentTime = 0;
+        audio.play().catch(e => console.log("Audio play blocked"));
+    }
+
+    function startQuiz() {
+        playSound();
+        document.getElementById('start-screen').classList.remove('active');
+        document.getElementById('quiz-screen').classList.add('active');
+        document.getElementById('p-bar').style.display = 'block';
+        renderQuestion();
+    }
+
+    function renderQuestion() {
+        const data = quizData[currentIdx];
+        document.getElementById('step-info').innerText = `CÂU HỎI ${currentIdx + 1}/${quizData.length}`;
+        document.getElementById('question-text').innerText = data.q;
+        
+        const list = document.getElementById('options-list');
+        list.innerHTML = `
+            <div class="option-card" onclick="handleSelect(10)">${data.a}</div>
+            <div class="option-card" onclick="handleSelect(5)">${data.b}</div>
+            <div class="option-card" onclick="handleSelect(0)">${data.c}</div>
+        `;
+        document.getElementById('progress-fill').style.width = `${((currentIdx) / quizData.length) * 100}%`;
+    }
+
+    function handleSelect(points) {
+        playSound();
+        score += points;
+        currentIdx++;
+        
+        if(currentIdx < quizData.length) {
+            renderQuestion();
+        } else {
+            showResult();
+        }
+    }
+
+    function showResult() {
+        document.getElementById('quiz-screen').classList.remove('active');
+        document.getElementById('p-bar').style.display = 'none';
+        document.getElementById('result-screen').classList.add('active');
+        
+        document.getElementById('res-score').innerText = score + "đ";
+        
+        const marker = document.getElementById('score-marker');
+        const percentage = Math.min((score / 110) * 100, 98);
+        setTimeout(() => { marker.style.left = percentage + "%"; }, 500);
+
+        const desc = document.getElementById('res-desc');
+        const badge = document.getElementById('res-badge');
+
+        if(score >= 90) {
+            badge.className = "badge good-bg";
+            badge.innerText = "NĂNG LỰC TỐT";
+            desc.innerText = `Con có nền tảng tập trung và ghi nhớ khá tốt. Tuy nhiên, hiện tại con vẫn đang học theo cách tự nhiên, chưa khai thác hết tiềm năng của não bộ.
+
+Nếu được hướng dẫn đúng phương pháp, con hoàn toàn có thể giảm mạnh thời gian học và bứt lên nhóm dẫn đầu.`;
+        } else if(score >= 60) {
+            badge.className = "badge warning-bg";
+            badge.innerText = "NGUY CƠ XAO NHÃNG";
+            desc.innerText = `Con đang học được, nhưng chủ yếu dựa vào nỗ lực và lặp lại nhiều lần. Dấu hiệu này cho thấy khả năng tập trung và cách ghi nhớ chưa thực sự hiệu quả.
+
+Nếu không điều chỉnh sớm, khi kiến thức tăng lên, con rất dễ bị đuối sức và mất hứng thú học.`;
+        } else {
+            badge.className = "badge urgent-bg";
+            badge.innerText = "NGUY CƠ KHẨN CẤP";
+            desc.innerText = `Mức độ tập trung của con đang rất thấp. Điều này khiến việc học trở nên nặng nề, dễ né tránh và nhanh quên.
+
+Nếu không điều chỉnh sớm cách học và khả năng tập trung, con rất dễ mất nền tảng khi kiến thức ngày càng nhiều hơn.`;
+        }
+    }
+
+    function ctaAction() {
+        // Logic chuyển hướng dựa trên điểm số
+        if (score >= 90) {
+            window.location.href = "https://forms.gle/iWmw1n9G2PceVrYA9"; // Kết quả cao
+        } else if (score >= 60) {
+            window.location.href = "https://forms.gle/Ncx5WAM7ZnK3qqTZ8"; // Kết quả trung bình
+        } else {
+            window.location.href = "https://forms.gle/jNakMEJVHs6PkugJ8"; // Kết quả yếu
+        }
+    }
+</script>
+
+</body>
+</html>
